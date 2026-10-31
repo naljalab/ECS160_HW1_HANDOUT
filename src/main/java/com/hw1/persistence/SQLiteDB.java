@@ -146,12 +146,9 @@ public class SQLiteDB {
                         if (value == null) return null;
                         String text = new String(value, StandardCharsets.UTF_8);
                         if (text.startsWith("http://") || text.startsWith("https://")) {
-                            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) new URL(text).openConnection();
-                            connection.setRequestProperty("User-Agent", "ECS160-HW1/1.0 (student project)");
-                            try (InputStream in = connection.getInputStream()) {
-                                value = in.readAllBytes();
-                            }
-
+    value = fetchRemote(text);
+    lazyField.set(self, value); // cache so we fetch only once
+}
                             lazyField.set(self, value); // cache so we fetch only once
                         }
                         return value;
@@ -189,6 +186,24 @@ public class SQLiteDB {
         }
         return target;
     }
+
+private byte[] fetchRemote(String url) throws Exception {
+    // Wikipedia "#/media/File:Name.jpg" links point at an article page, not the image.
+    // Rewrite them to the direct file address, which redirects to the image.
+    int frag = url.indexOf("#/media/File:");
+    int wiki = url.indexOf("/wiki/");
+    if (frag >= 0 && wiki >= 0) {
+        String fileName = url.substring(frag + "#/media/File:".length());
+        url = url.substring(0, wiki) + "/wiki/Special:FilePath/" + fileName;
+    }
+    java.net.HttpURLConnection conn =
+            (java.net.HttpURLConnection) new URL(url).openConnection();
+    conn.setRequestProperty("User-Agent", "ECS160-HW1/1.0 (student project)");
+    conn.setInstanceFollowRedirects(true);
+    try (InputStream in = conn.getInputStream()) {
+        return in.readAllBytes();
+    }
+}
 
     public Connection getConnection() {
         return connection;

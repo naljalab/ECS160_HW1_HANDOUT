@@ -146,9 +146,12 @@ public class SQLiteDB {
                         if (value == null) return null;
                         String text = new String(value, StandardCharsets.UTF_8);
                         if (text.startsWith("http://") || text.startsWith("https://")) {
-                            try (InputStream in = new URL(text).openStream()) {
+                            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) new URL(text).openConnection();
+                            connection.setRequestProperty("User-Agent", "ECS160-HW1/1.0 (student project)");
+                            try (InputStream in = connection.getInputStream()) {
                                 value = in.readAllBytes();
                             }
+
                             lazyField.set(self, value); // cache so we fetch only once
                         }
                         return value;
